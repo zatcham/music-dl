@@ -8,6 +8,7 @@ import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Color;
 import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -27,6 +28,7 @@ public class DownloaderUI extends JFrame {
     private JTextField oauthTokenTextField;
     private JTextArea consoleTextArea;
     private JButton startButton;
+    private JButton stopButton;
 
     public DownloaderUI() {
         setTitle("Downloader UI");
@@ -97,14 +99,34 @@ public class DownloaderUI extends JFrame {
         consoleTextArea.setBackground(Color.black);
         consoleTextArea.setForeground(Color.white);
 
-        // Start button
+        // Start and stop button
         startButton = new JButton("Start");
+        stopButton = new JButton("Stop");
+        stopButton.setEnabled(false); // Stop button disable by default
         startButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 startDownload();
             }
         });
+        // Stop Button listener
+        stopButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (process != null) {
+                    process.destroyForcibly(); // this doesnt work
+                }
+                try {
+                    Runtime.getRuntime().exec("taskkill /F /IM yt-dlp.exe");
+                    cleanUpAfterRun(folderTextField.getText()); // usually doesnt get cleaned up at first
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+                stopButton.setEnabled(false);
+                startButton.setEnabled(true);
+            }
+        });
+
 
         // Radio button listener for OAuth token field
         soundcloudRadioButton.addItemListener(e -> {
@@ -129,7 +151,29 @@ public class DownloaderUI extends JFrame {
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         mainPanel.add(radioButtonPanel, BorderLayout.NORTH);
         mainPanel.add(splitPane, BorderLayout.CENTER);
-        mainPanel.add(startButton, BorderLayout.SOUTH);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        buttonPanel.add(startButton);
+        buttonPanel.add(stopButton);
+
+        // Create menu bar
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menu = new JMenu("Music DL");
+
+        JMenuItem settingsItem = new JMenuItem("Settings");
+        settingsItem.addActionListener(e -> openSettings());
+        menu.add(settingsItem);
+
+        JMenuItem infoItem = new JMenuItem("About");
+        infoItem.addActionListener(e -> openInfo());
+        menu.add(infoItem);
+
+        menuBar.add(menu);
+//        menuBar.add(infoItem);
+//        menuBar.add(settingsItem);
+        setJMenuBar(menuBar);
+
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         getContentPane().add(mainPanel);
 
@@ -138,56 +182,15 @@ public class DownloaderUI extends JFrame {
         setVisible(true);
     }
 
-    private void startDownload() {
-        // Retrieve user input
-//        String url = urlTextField.getText();
-//        String folderName = folderTextField.getText();
-//        String oauthToken = oauthTokenTextField.getText();
-//
-//        // Determine the selected platform
-//        String platform;
-//        if (soundcloudRadioButton.isSelected()) {
-//            platform = "SoundCloud";
-//        } else if (youtubeRadioButton.isSelected()) {
-//            platform = "YouTube";
-//        } else {
-//            JOptionPane.showMessageDialog(this, "Please select a platform.", "Error", JOptionPane.ERROR_MESSAGE);
-//            return;
-//        }
-//
-//        if (url.isBlank()) {
-//            JOptionPane.showMessageDialog(this, "URL cannot be empty", "Error", JOptionPane.ERROR_MESSAGE);
-//            return;
-//        } else if (folderName.isBlank()) {
-//            JOptionPane.showMessageDialog(this, "Folder Name cannot be empty", "Error", JOptionPane.ERROR_MESSAGE);
-//            return;
-//        } else if (platform.equals("SoundCloud") && oauthToken.isBlank()) {
-//            JOptionPane.showMessageDialog(this, "OAuth Token cannot be empty", "Error", JOptionPane.ERROR_MESSAGE);
-//            return;
-//        }
-//
-//        // Perform the download operation based on the selected platform
-//        consoleTextArea.append(("--- \n"));
-//        consoleTextArea.append("Platform: " + platform + "\n");
-//        consoleTextArea.append("URL: " + url + "\n");
-//        consoleTextArea.append("Folder Name: " + folderName + "\n");
-//        consoleTextArea.append("OAuth Token: " + oauthToken + "\n");
-//
-//        consoleTextArea.append("Creating folder" + "\n");
-//        // Create folder to be used, check if successful
-//        if (createFolder(folderName)) {
-//            consoleTextArea.append("Starting yt-dlp... \n");
-//
-//            // Run platform's download function
-//            if (platform.equals("SoundCloud")) {
-//                downloadSC(folderName, url, oauthToken);
-//            } else if (platform.equals("YouTube")) {
-//                downloadYT(folderName, url);
-//            }
-//        } else {
-//            consoleTextArea.append("Error creating folder" + "\n");
-//        }
+    private void openSettings() {
+        JOptionPane.showMessageDialog(null, "Settings", "Music DL", JOptionPane.ERROR_MESSAGE);
+    }
 
+    private void openInfo() {
+        JOptionPane.showMessageDialog(null, "About", "Music DL", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void startDownload() {
         SwingWorker<Void, String> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
@@ -206,6 +209,10 @@ public class DownloaderUI extends JFrame {
                     JOptionPane.showMessageDialog(null, "Please select a platform.", "Error", JOptionPane.ERROR_MESSAGE);
                     return null;
                 }
+
+                // Change button enabled
+                startButton.setEnabled(false);
+                stopButton.setEnabled(true);
 
                 // Perform the download operation based on the selected platform
                 consoleTextArea.append("---\n");
@@ -227,9 +234,18 @@ public class DownloaderUI extends JFrame {
                         downloadYT(folderName, url);
                         consoleTextArea.append("Deleting assets from folder.. \n");
                         if (cleanUpAfterRun(folderName)) {
-                            consoleTextArea.append("Successfully deleted assets");
+                            consoleTextArea.append("Successfully deleted assets \n");
+                            consoleTextArea.append("Download Complete \n");
+                            consoleTextArea.append("----- \n");
+                            stopButton.setEnabled(false);
+                            startButton.setEnabled(true);
                         } else {
-                            consoleTextArea.append("Error occured whilst deleting assets");
+                            consoleTextArea.append("Error occured whilst deleting assets\n");
+                            // Oh well -- if stop button used, try deleting there
+                            consoleTextArea.append("Download Complete \n");
+                            consoleTextArea.append("----- \n");
+                            stopButton.setEnabled(false);
+                            startButton.setEnabled(true);
                         }
                     }
                 } else {
@@ -392,40 +408,46 @@ public class DownloaderUI extends JFrame {
             String[] command = {folder + "/yt-dlp.exe", "--extract-audio", "-f", "ba", "--embed-thumbnail", "--audio-quality", "0", "--audio-format", "mp3", "-o", folder + "/%(title)s.%(ext)s", "--add-metadata", "--cookies-from-browser", "edge", url};
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.redirectErrorStream(true);
-            Process process = pb.start();
+            process = pb.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
                 String finalLine = line;
                 SwingUtilities.invokeLater(() -> {
                     consoleTextArea.append(finalLine + " \n");
+                    consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
                     System.out.println(finalLine);
                 });
             }
             int exitCode = process.waitFor();
-            consoleTextArea.append("Process exited");
+            consoleTextArea.append("Process exited \n");
             System.out.println("Process exited with code: " + exitCode);
+            consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
         } catch (InterruptedException | IOException e) {
             consoleTextArea.append("Error: " + e + " \n");
             throw new RuntimeException(e);
         }
     }
 
+    private Process process;
+
     private void downloadSC(String folder, String url, String token) {
         try {
             String[] command = {folder + "/yt-dlp.exe", "--extract-audio", "-f", "ba", "--embed-thumbnail", "--audio-quality", "0", "--audio-format", "mp3", "-o", folder + "/%(title)s.%(ext)s", "--add-metadata", "--cookies-from-browser", "edge", "--add-header", "Authorisation: OAuth " + token, url};
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.redirectErrorStream(true);
-            Process process = pb.start();
+            process = pb.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
                 consoleTextArea.append(line + " \n");
+                consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
                 System.out.println(line);
             }
             int exitCode = process.waitFor();
             consoleTextArea.append("Process exited");
             System.out.println("Process exited with code: " + exitCode);
+            consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
         } catch (InterruptedException | IOException e) {
             consoleTextArea.append("Error: " + e + " \n");
             throw new RuntimeException(e);
@@ -460,6 +482,5 @@ public class DownloaderUI extends JFrame {
         }
     }
 
-
-
 }
+
