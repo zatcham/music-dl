@@ -19,8 +19,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.prefs.*;
+// UI
+import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatDarkLaf;
 
 public class DownloaderUI extends JFrame {
+
     private JRadioButton soundcloudRadioButton;
     private JRadioButton youtubeRadioButton;
     private JTextField urlTextField;
@@ -30,14 +35,24 @@ public class DownloaderUI extends JFrame {
     private JButton startButton;
     private JButton stopButton;
 
+    private Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
+
     public DownloaderUI() {
+        FlatLightLaf.setup();
+        FlatDarkLaf.setup();
         setTitle("Downloader UI");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setPreferredSize(new Dimension(800, 600));
 
         try {
             // Set the Nimbus Look and Feel
-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+//            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+            if (userPrefs.getBoolean("darkMode", true)) {
+                UIManager.setLookAndFeel( new FlatDarkLaf() );
+            } else {
+                UIManager.setLookAndFeel( new FlatLightLaf() );
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -168,6 +183,10 @@ public class DownloaderUI extends JFrame {
         infoItem.addActionListener(e -> openInfo());
         menu.add(infoItem);
 
+        JMenuItem exitItem = new JMenuItem("Exit");
+        exitItem.addActionListener(e -> exitProg());
+        menu.add(exitItem);
+
         menuBar.add(menu);
 //        menuBar.add(infoItem);
 //        menuBar.add(settingsItem);
@@ -183,11 +202,62 @@ public class DownloaderUI extends JFrame {
     }
 
     private void openSettings() {
-        JOptionPane.showMessageDialog(null, "Settings", "Music DL", JOptionPane.ERROR_MESSAGE);
+        Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
+        boolean darkMode = userPrefs.getBoolean("darkMode", true);
+        JFrame frame = new JFrame("Settings - Music Downloader");
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setSize(400, 300);
+        frame.setLocationRelativeTo(null);
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
+
+
+        // Light/Dark Mode Toggle
+        JToggleButton modeToggle = new JToggleButton("Light Mode");
+        modeToggle.addActionListener(e -> {
+            if (modeToggle.isSelected()) {
+                modeToggle.setText("Dark Mode");
+                userPrefs.putBoolean("darkMode", true);
+                JOptionPane.showMessageDialog(null, "Changes will apply on program restart", "Music DL", JOptionPane.INFORMATION_MESSAGE);
+
+            } else {
+                modeToggle.setText("Light Mode");
+                userPrefs.putBoolean("darkMode", false);
+                JOptionPane.showMessageDialog(null, "Changes will apply on program restart", "Music DL", JOptionPane.INFORMATION_MESSAGE);
+
+            }
+        });
+
+        if (darkMode) {
+            modeToggle.setText("Dark Mode");
+        }
+
+        mainPanel.add(modeToggle, BorderLayout.NORTH);
+        frame.add(mainPanel);
+
+        frame.setVisible(true);
     }
 
     private void openInfo() {
-        JOptionPane.showMessageDialog(null, "About", "Music DL", JOptionPane.ERROR_MESSAGE);
+        String programName = "yt-dlp UI";
+        String version = "0.5";
+        String creator = "Zach Matcham (zatcham)";
+        String desc = "A simple UI to control download files with yt-dlp";
+        String msg = String.format("Program Name: %s\nVersion: %s\nDeveloper: %s\n\n%s", programName, version, creator, desc);
+
+        JOptionPane.showMessageDialog(null, msg, "Music DL", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void exitProg() {
+        int opt = JOptionPane.showConfirmDialog(null, "Are you sure you wish to exit?", "Music DL", JOptionPane.YES_NO_OPTION);
+
+        if (opt == JOptionPane.YES_OPTION) {
+            System.out.println("Goodbye xx");
+            System.exit(0);
+        } else {
+            System.out.println("Program not exited");
+        }
     }
 
     private void startDownload() {
@@ -209,6 +279,16 @@ public class DownloaderUI extends JFrame {
                     JOptionPane.showMessageDialog(null, "Please select a platform.", "Error", JOptionPane.ERROR_MESSAGE);
                     return null;
                 }
+
+                // Validate fields and stop if empty
+                if (urlTextField.getText().isEmpty()) {
+                    // TODO : URL validation
+                    JOptionPane.showMessageDialog(null, "Please enter a URL.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return null;
+                } else if (folderTextField.getText().isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Please enter a folder name.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return null;
+                } // no need to check oauth as can work without
 
                 // Change button enabled
                 startButton.setEnabled(false);
