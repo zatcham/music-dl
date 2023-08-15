@@ -1,18 +1,10 @@
 package uk.zatcham.musicdl;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ItemEvent;
 import java.util.List;
 // Java AWT must be imported one by one instead of * as otherwise awt.list is used
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.prefs.*;
 // UI
 import com.formdev.flatlaf.FlatLightLaf;
@@ -21,17 +13,14 @@ import com.formdev.flatlaf.FlatDarkLaf;
 public class DownloaderUI extends JFrame {
 
     // Declare UI components
-    private JRadioButton soundcloudRadioButton;
-    private JRadioButton youtubeRadioButton;
-    private JTextField urlTextField;
-    private JTextField folderTextField;
-    private JTextField oauthTokenTextField;
-    private JTextArea consoleTextArea;
-    private JButton startButton;
-    private JButton stopButton;
-
-    // Using preferences to store user settings
-    private Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
+    private final JRadioButton soundcloudRadioButton;
+    private final JRadioButton youtubeRadioButton;
+    private final JTextField urlTextField;
+    private final JTextField folderTextField;
+    private final JTextField oauthTokenTextField;
+    private final JTextArea consoleTextArea;
+    private final JButton startButton;
+    private final JButton stopButton;
 
     public DownloaderUI() {
         FlatLightLaf.setup(); // Required for Flatlaf UI
@@ -44,6 +33,8 @@ public class DownloaderUI extends JFrame {
         try {
             // Set the Nimbus Look and Feel
 //            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+            // Using preferences to store user settings
+            Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
             if (userPrefs.getBoolean("darkMode", true)) {
                 UIManager.setLookAndFeel( new FlatDarkLaf() );
             } else {
@@ -114,34 +105,26 @@ public class DownloaderUI extends JFrame {
         startButton = new JButton("Start");
         stopButton = new JButton("Stop");
         stopButton.setEnabled(false); // Stop button disable by default
-        startButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                startDownload();
-            }
-        });
+        startButton.addActionListener(e -> startDownload());
         // Stop Button listener
-        stopButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (process != null) {
-                    process.destroyForcibly(); // this doesnt work
-                }
-                try {
-                    Runtime.getRuntime().exec("taskkill /F /IM yt-dlp.exe");
-                    Helpers.cleanUpAfterRun(folderTextField.getText()); // usually doesnt get cleaned up at first
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-                stopButton.setEnabled(false);
-                startButton.setEnabled(true);
+        stopButton.addActionListener(e -> {
+            if (process != null) {
+                process.destroyForcibly(); // this doesnt work
             }
+            try {
+                Runtime.getRuntime().exec("taskkill /F /IM yt-dlp.exe");
+                Helpers.cleanUpAfterRun(folderTextField.getText()); // usually doesnt get cleaned up at first
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+            stopButton.setEnabled(false);
+            startButton.setEnabled(true);
         });
 
 
         // Radio button listener for OAuth token field
         soundcloudRadioButton.addItemListener(e -> {
-            if (e.getStateChange() == 1) { // selected
+            if (e.getStateChange() == ItemEvent.SELECTED) { // selected
                 oauthTokenLabel.setVisible(true);
                 oauthTokenTextField.setVisible(true);
             } else {
@@ -192,8 +175,6 @@ public class DownloaderUI extends JFrame {
         menu.add(exitItem);
 
         menuBar.add(menu);
-//        menuBar.add(infoItem);
-//        menuBar.add(settingsItem);
         setJMenuBar(menuBar);
 
         // Add buttons to UI
@@ -211,7 +192,7 @@ public class DownloaderUI extends JFrame {
      * Opens Settings UI
      */
     private void openSettings() {
-        System.out.println("Opening settings \n --- \n");
+        System.out.println("Opening settings \n ---");
         // Get settings
         Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
         boolean darkMode = userPrefs.getBoolean("darkMode", true);
@@ -251,7 +232,7 @@ public class DownloaderUI extends JFrame {
 
         // Cookies from which browser
         String[] browsers  = {"edge", "chrome", "firefox"};
-        JComboBox<String> browserList = new JComboBox<String>(browsers);
+        JComboBox<String> browserList = new JComboBox<>(browsers);
         constraints.gridx = 0;
         constraints.gridy = 1;
 
@@ -298,14 +279,14 @@ public class DownloaderUI extends JFrame {
     private void startDownload() {
         SwingWorker<Void, String> worker = new SwingWorker<>() {
             @Override
-            protected Void doInBackground() throws Exception {
+            protected Void doInBackground() {
                 // Retrieve user input
                 String url = urlTextField.getText();
                 String folderName = folderTextField.getText();
                 String oauthToken = oauthTokenTextField.getText();
 
                 // Determine the selected platform
-                String platform = "";
+                String platform;
                 if (soundcloudRadioButton.isSelected()) {
                     platform = "SoundCloud";
                 } else if (youtubeRadioButton.isSelected()) {
@@ -381,8 +362,6 @@ public class DownloaderUI extends JFrame {
 
     /**
      * Main function, checks the pre-requisites then runs UI
-     * @param args
-     * @throws IOException
      */
     public static void main(String[] args) throws IOException {
         // Do pre req checks
@@ -406,12 +385,7 @@ public class DownloaderUI extends JFrame {
         Helpers.checkAssetsExist();
 
         // Run UI
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new DownloaderUI();
-            }
-        });
+        SwingUtilities.invokeLater(DownloaderUI::new);
     }
 
     private Process process;
