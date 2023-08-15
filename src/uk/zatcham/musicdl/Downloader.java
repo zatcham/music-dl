@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 
 public class Downloader {
     private JTextArea consoleTextArea;
-    private JButton startButton, stopButton;
     private Process process;
 
     public Downloader(JTextArea consoleTextArea) {

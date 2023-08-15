@@ -112,7 +112,7 @@ public class DownloaderUI extends JFrame {
                 process.destroyForcibly(); // this doesnt work
             }
             try {
-                Runtime.getRuntime().exec("taskkill /F /IM yt-dlp.exe");
+                Runtime.getRuntime().exec("taskkill /F /IM yt-dlp.exe"); // Exec is deprecated
                 Helpers.cleanUpAfterRun(folderTextField.getText()); // usually doesnt get cleaned up at first
             } catch (IOException ex) {
                 throw new RuntimeException(ex);

@@ -50,7 +50,7 @@ public class Helpers {
 
     /**
      * Copys required assets into folder
-     * @param folder
+     * @param folder - Folder that is to be used for download
      */
     public static void copyReqs(String folder) {
         try {
@@ -74,7 +74,7 @@ public class Helpers {
     /**
      * Creates the folder for downloaded files to go into
      *
-     * @param folder
+     * @param folder - Folder to be used for download
      * @return bool
      */
     public static boolean createFolder(String folder) {
@@ -131,7 +131,7 @@ public class Helpers {
     /**
      * Checks assets folder exists, and all files exist within it.
      */
-    public static void checkAssetsExist() throws IOException {
+    public static void checkAssetsExist() {
         System.out.println("Checking all assets exist");
         // Check 'assets' folder exists
         File folder = new File("assets/");
@@ -139,7 +139,7 @@ public class Helpers {
             System.out.println("assets folder exists, continuing.");
             // Check all assets exist in folder
             String[] fileNames = {"yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"};
-            ArrayList<String> missingFiles = new ArrayList<String>();
+            ArrayList<String> missingFiles = new ArrayList<>();
             boolean allExist = true;
             for (String fileName : fileNames) {
                 File file = new File(folder, fileName);
