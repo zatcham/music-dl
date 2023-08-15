@@ -1,14 +1,8 @@
 package uk.zatcham.musicdl;
 import javax.swing.*;
+import java.awt.*;
 import java.util.List;
 // Java AWT must be imported one by one instead of * as otherwise awt.list is used
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Dimension;
-import java.awt.Insets;
-import java.awt.Color;
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -26,6 +20,7 @@ import com.formdev.flatlaf.FlatDarkLaf;
 
 public class DownloaderUI extends JFrame {
 
+    // Declare UI components
     private JRadioButton soundcloudRadioButton;
     private JRadioButton youtubeRadioButton;
     private JTextField urlTextField;
@@ -35,15 +30,17 @@ public class DownloaderUI extends JFrame {
     private JButton startButton;
     private JButton stopButton;
 
+    // Using preferences to store user settings
     private Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
 
     public DownloaderUI() {
-        FlatLightLaf.setup();
+        FlatLightLaf.setup(); // Required for Flatlaf UI
         FlatDarkLaf.setup();
-        setTitle("Downloader UI");
+        setTitle("Music DL");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setPreferredSize(new Dimension(800, 600));
 
+        // Set LaF
         try {
             // Set the Nimbus Look and Feel
 //            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
@@ -52,7 +49,6 @@ public class DownloaderUI extends JFrame {
             } else {
                 UIManager.setLookAndFeel( new FlatLightLaf() );
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -133,7 +129,7 @@ public class DownloaderUI extends JFrame {
                 }
                 try {
                     Runtime.getRuntime().exec("taskkill /F /IM yt-dlp.exe");
-                    cleanUpAfterRun(folderTextField.getText()); // usually doesnt get cleaned up at first
+                    Helpers.cleanUpAfterRun(folderTextField.getText()); // usually doesnt get cleaned up at first
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
@@ -175,16 +171,24 @@ public class DownloaderUI extends JFrame {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("Music DL");
 
-        JMenuItem settingsItem = new JMenuItem("Settings");
-        settingsItem.addActionListener(e -> openSettings());
-        menu.add(settingsItem);
+        JMenuItem folderOpenItem = new JMenuItem("Open Folder");
+        folderOpenItem.addActionListener(e -> Helpers.openCurrentDir());
+        menu.add(folderOpenItem);
+
+        menu.addSeparator();
 
         JMenuItem infoItem = new JMenuItem("About");
         infoItem.addActionListener(e -> openInfo());
         menu.add(infoItem);
 
+        JMenuItem settingsItem = new JMenuItem("Settings");
+        settingsItem.addActionListener(e -> openSettings());
+        menu.add(settingsItem);
+
+        menu.addSeparator();
+
         JMenuItem exitItem = new JMenuItem("Exit");
-        exitItem.addActionListener(e -> exitProg());
+        exitItem.addActionListener(e -> Helpers.exitProg());
         menu.add(exitItem);
 
         menuBar.add(menu);
@@ -192,6 +196,7 @@ public class DownloaderUI extends JFrame {
 //        menuBar.add(settingsItem);
         setJMenuBar(menuBar);
 
+        // Add buttons to UI
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         getContentPane().add(mainPanel);
@@ -201,20 +206,29 @@ public class DownloaderUI extends JFrame {
         setVisible(true);
     }
 
+
+    /**
+     * Opens Settings UI
+     */
     private void openSettings() {
+        System.out.println("Opening settings \n --- \n");
+        // Get settings
         Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
         boolean darkMode = userPrefs.getBoolean("darkMode", true);
+        // Create UI
         JFrame frame = new JFrame("Settings - Music Downloader");
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setSize(400, 300);
         frame.setLocationRelativeTo(null);
 
         JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BorderLayout());
-
+        mainPanel.setLayout(new GridBagLayout());
+        GridBagConstraints constraints = new GridBagConstraints();
 
         // Light/Dark Mode Toggle
         JToggleButton modeToggle = new JToggleButton("Light Mode");
+        constraints.gridx = 0;
+        constraints.gridy = 0;
         modeToggle.addActionListener(e -> {
             if (modeToggle.isSelected()) {
                 modeToggle.setText("Dark Mode");
@@ -228,38 +242,59 @@ public class DownloaderUI extends JFrame {
 
             }
         });
-
         if (darkMode) {
             modeToggle.setText("Dark Mode");
+            modeToggle.setSelected(true);
+            System.out.println("Dark mode currently selected");
         }
+        mainPanel.add(modeToggle, constraints);
 
-        mainPanel.add(modeToggle, BorderLayout.NORTH);
+        // Cookies from which browser
+        String[] browsers  = {"edge", "chrome", "firefox"};
+        JComboBox<String> browserList = new JComboBox<String>(browsers);
+        constraints.gridx = 0;
+        constraints.gridy = 1;
+
+        String currentBrowser = userPrefs.get("browser", "edge");
+        System.out.println("Current browser: " + currentBrowser);
+        browserList.getModel().setSelectedItem(currentBrowser);
+        browserList.addActionListener(e -> {
+            String b = (String) browserList.getSelectedItem();
+            userPrefs.put("browser", b);
+            System.out.println("Setting " + b + " as browser");
+        });
+        mainPanel.add(browserList, constraints);
+
+        JLabel bListTitle = new JLabel("Browser: ");
+        constraints.gridx = 0;
+        constraints.gridy = 1;
+//        constraints.anchor = GridBagConstraints.WEST;
+        mainPanel.add(bListTitle, constraints);
+//        TODO
+
+//        mainPanel.add(modeToggle, BorderLayout.NORTH);
+//         mainPanel.add(browserList, BorderLayout.NORTH); // TODO
         frame.add(mainPanel);
 
         frame.setVisible(true);
     }
 
+    /**
+     * Opens Info box
+     */
     private void openInfo() {
         String programName = "yt-dlp UI";
         String version = "0.5";
         String creator = "Zach Matcham (zatcham)";
         String desc = "A simple UI to control download files with yt-dlp";
         String msg = String.format("Program Name: %s\nVersion: %s\nDeveloper: %s\n\n%s", programName, version, creator, desc);
-
+        // Using msg box to show info
         JOptionPane.showMessageDialog(null, msg, "Music DL", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void exitProg() {
-        int opt = JOptionPane.showConfirmDialog(null, "Are you sure you wish to exit?", "Music DL", JOptionPane.YES_NO_OPTION);
-
-        if (opt == JOptionPane.YES_OPTION) {
-            System.out.println("Goodbye xx");
-            System.exit(0);
-        } else {
-            System.out.println("Program not exited");
-        }
-    }
-
+    /**
+     * Start download using swing worker
+     */
     private void startDownload() {
         SwingWorker<Void, String> worker = new SwingWorker<>() {
             @Override
@@ -303,30 +338,28 @@ public class DownloaderUI extends JFrame {
 
                 consoleTextArea.append("Creating folder\n");
                 // Create folder to be used, check if successful
-                if (createFolder(folderName)) {
+                if (Helpers.createFolder(folderName)) {
                     consoleTextArea.append("Starting yt-dlp...\n");
-
-                    // Run platform's download function
-                    if (platform.equals("SoundCloud")) {
-                        downloadSC(folderName, url, oauthToken);
-                        cleanUpAfterRun(folderName);
-                    } else if (platform.equals("YouTube")) {
-                        downloadYT(folderName, url);
-                        consoleTextArea.append("Deleting assets from folder.. \n");
-                        if (cleanUpAfterRun(folderName)) {
-                            consoleTextArea.append("Successfully deleted assets \n");
-                            consoleTextArea.append("Download Complete \n");
-                            consoleTextArea.append("----- \n");
-                            stopButton.setEnabled(false);
-                            startButton.setEnabled(true);
-                        } else {
-                            consoleTextArea.append("Error occured whilst deleting assets\n");
-                            // Oh well -- if stop button used, try deleting there
-                            consoleTextArea.append("Download Complete \n");
-                            consoleTextArea.append("----- \n");
-                            stopButton.setEnabled(false);
-                            startButton.setEnabled(true);
-                        }
+                    // Download
+                    Downloader downloader = new Downloader(consoleTextArea);
+//                        downloadYT(folderName, url);
+                    downloader.startDownload(platform, folderName, url, "");
+                    // Delete assets after run - TODO bug
+                    consoleTextArea.append("Deleting assets from folder.. \n");
+                    // Delete all assets after run
+                    if (Helpers.cleanUpAfterRun(folderName)) {
+                        consoleTextArea.append("Successfully deleted assets \n");
+                        consoleTextArea.append("Download Complete \n");
+                        consoleTextArea.append("----- \n");
+                        stopButton.setEnabled(false);
+                        startButton.setEnabled(true);
+                    } else {
+                        consoleTextArea.append("Error occured whilst deleting assets\n");
+                        // Oh well -- if stop button used, try deleting there
+                        consoleTextArea.append("Download Complete \n");
+                        consoleTextArea.append("----- \n");
+                        stopButton.setEnabled(false);
+                        startButton.setEnabled(true);
                     }
                 } else {
                     consoleTextArea.append("Error creating folder\n");
@@ -335,23 +368,22 @@ public class DownloaderUI extends JFrame {
                 return null;
             }
 
+            // Start process, worker is needed to stop UI from freezing
             @Override
             protected void process(List<String> chunks) {
                 for (String line : chunks) {
                     consoleTextArea.append(line + "\n");
                 }
             }
-
-//            @Override
-//            protected void done() {
-//                consoleTextArea.append("Process exited.\n");
-//            }
         };
-
         worker.execute();
-
     }
 
+    /**
+     * Main function, checks the pre-requisites then runs UI
+     * @param args
+     * @throws IOException
+     */
     public static void main(String[] args) throws IOException {
         // Do pre req checks
         // Check OS is Windows
@@ -361,8 +393,17 @@ public class DownloaderUI extends JFrame {
             System.out.println("Error: Invalid OS. ");
             System.exit(0);
         }
+        // Check if first run
+        Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
+        if (userPrefs.getBoolean("firstRun", true)) {
+            userPrefs.putBoolean("firstRun", false);
+            // TODO
+//            userPrefs.put("downloaderArgs", "/yt-dlp.exe", "--extract-audio", "-f", "ba", "--embed-thumbnail", "--audio-quality", "0", "--audio-format", "mp3", "--add-metadata", "--cookies-from-browser", "edge");
+            // "-o", folder + "/%(title)s.%(ext)s"
+            userPrefs.put("browser", "edge");
+        }
         // Check all assets exist
-        checkAssetsExist();
+        Helpers.checkAssetsExist();
 
         // Run UI
         SwingUtilities.invokeLater(new Runnable() {
@@ -373,194 +414,7 @@ public class DownloaderUI extends JFrame {
         });
     }
 
-    /**
-     * Checks assets folder exists, and all files exist within it.
-     */
-    public static void checkAssetsExist() throws IOException {
-        System.out.println("Checking all assets exist");
-        // Check 'assets' folder exists
-        File folder = new File("assets/");
-        if (folder.exists() && folder.isDirectory()) {
-            System.out.println("assets folder exists, continuing.");
-            // Check all assets exist in folder
-            String[] fileNames = {"yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"};
-            ArrayList<String> missingFiles = new ArrayList<String>();
-            boolean allExist = true;
-            for (String fileName : fileNames) {
-                File file = new File(folder, fileName);
-                if (!file.exists() || file.isDirectory()) {
-                    allExist = false;
-                    missingFiles.add(fileName);
-                }
-            }
-            if (allExist) {
-                System.out.println("All files exist in assets folder");
-            } else {
-                // Something is missing
-                System.out.println("One or more files do not exist.");
-                System.out.println(missingFiles.toString());
-                System.out.println("Exiting...");
-                JOptionPane.showMessageDialog(null, "The following files are missing from the assets folder: " + missingFiles.toString(), "Music DL", JOptionPane.ERROR_MESSAGE);
-                int opt = JOptionPane.showConfirmDialog(null, "Would you like to download the assets?", "Music DL", JOptionPane.YES_NO_OPTION);
-
-                if (opt == JOptionPane.YES_OPTION) {
-                    // Download assets
-                    AssetsDownloader.main(null);
-                    checkAssetsExist(); // Check assets now exist
-                } else {
-                    System.exit(0);
-                    // TODO: Add download option , in prog
-                }
-            }
-        } else {
-            // Assets folder does not exist
-            System.out.println("Assets folder does not exist, asking user if they would like it created.");
-            int opt = JOptionPane.showConfirmDialog(null, "'assets' folder is missing. Would you like to create it", "Music DL", JOptionPane.YES_NO_OPTION);
-
-            if (opt == JOptionPane.YES_OPTION) {
-                // Create assets folder
-                boolean success = folder.mkdir();
-                if (success) {
-                    JOptionPane.showMessageDialog(null, "'assets' folder created successfully. ", "Music DL", JOptionPane.INFORMATION_MESSAGE);
-                    checkAssetsExist(); // Loop to re-check for assets
-                } else {
-                    JOptionPane.showMessageDialog(null, "Failed to create 'assets' folder. ", "Music DL", JOptionPane.ERROR_MESSAGE);
-                }
-            } else {
-                JOptionPane.showMessageDialog(null, "Folder creation cancelled. Exiting..", "Music DL", JOptionPane.INFORMATION_MESSAGE);
-                System.exit(0);
-            }
-        }
-    }
-
-    /**
-     * Creates the folder for downloaded files to go into
-     *
-     * @param folder
-     * @return bool
-     */
-    public static boolean createFolder(String folder) {
-        Path p = Paths.get(folder);
-        if (Files.exists(p)) {
-            System.out.println(folder + " already exists.");
-            int opt = JOptionPane.showConfirmDialog(null, folder + " already exists. Would you like to continue? ", "Music DL", JOptionPane.YES_NO_OPTION);
-            if (opt == JOptionPane.YES_OPTION) {
-                copyReqs(folder);
-                return true;
-            } else {
-                JOptionPane.showMessageDialog(null, "Operation cancelled.", "Music DL", JOptionPane.INFORMATION_MESSAGE);
-                return false;
-            }
-        } else {
-            try {
-                Files.createDirectories(p);
-                copyReqs(folder);
-                return true;
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(null, "Error when creating folder: " + e);
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-
-    private static void copyReqs(String folder) {
-        try {
-            Files.copy(new File("assets/yt-dlp.exe").toPath(), new File(folder + "/yt-dlp.exe").toPath());
-            Files.copy(new File("assets/ffmpeg.exe").toPath(), new File(folder + "/ffmpeg.exe").toPath());
-            Files.copy(new File("assets/ffprobe.exe").toPath(), new File(folder + "/ffprobe.exe").toPath());
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "Error when copying assets: " + e);
-            if (e instanceof java.nio.file.FileAlreadyExistsException) {
-                int opt = JOptionPane.showConfirmDialog(null, "Continue? ", "Music DL", JOptionPane.YES_NO_OPTION);
-                if (opt == JOptionPane.NO_OPTION) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private void downloadYT(String folder, String url) {
-        try {
-            // TODO : Add settings window to allow cookies from other browsers and change yt-dlp settings
-            String[] command = {folder + "/yt-dlp.exe", "--extract-audio", "-f", "ba", "--embed-thumbnail", "--audio-quality", "0", "--audio-format", "mp3", "-o", folder + "/%(title)s.%(ext)s", "--add-metadata", "--cookies-from-browser", "edge", url};
-            ProcessBuilder pb = new ProcessBuilder(command);
-            pb.redirectErrorStream(true);
-            process = pb.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String finalLine = line;
-                SwingUtilities.invokeLater(() -> {
-                    consoleTextArea.append(finalLine + " \n");
-                    consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
-                    System.out.println(finalLine);
-                });
-            }
-            int exitCode = process.waitFor();
-            consoleTextArea.append("Process exited \n");
-            System.out.println("Process exited with code: " + exitCode);
-            consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
-        } catch (InterruptedException | IOException e) {
-            consoleTextArea.append("Error: " + e + " \n");
-            throw new RuntimeException(e);
-        }
-    }
-
     private Process process;
-
-    private void downloadSC(String folder, String url, String token) {
-        try {
-            String[] command = {folder + "/yt-dlp.exe", "--extract-audio", "-f", "ba", "--embed-thumbnail", "--audio-quality", "0", "--audio-format", "mp3", "-o", folder + "/%(title)s.%(ext)s", "--add-metadata", "--cookies-from-browser", "edge", "--add-header", "Authorisation: OAuth " + token, url};
-            ProcessBuilder pb = new ProcessBuilder(command);
-            pb.redirectErrorStream(true);
-            process = pb.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                consoleTextArea.append(line + " \n");
-                consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
-                System.out.println(line);
-            }
-            int exitCode = process.waitFor();
-            consoleTextArea.append("Process exited");
-            System.out.println("Process exited with code: " + exitCode);
-            consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
-        } catch (InterruptedException | IOException e) {
-            consoleTextArea.append("Error: " + e + " \n");
-            throw new RuntimeException(e);
-        }
-    }
-
-    private boolean cleanUpAfterRun(String folder) {
-        // Clean up fodler by deleting assets
-        System.out.println("Deleting assets");
-        String[] fileNames = {"yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"};
-        boolean allSuccess = true;
-        for (String fileName : fileNames) {
-            File file = new File(folder, fileName);
-            if (file.exists()) {
-                boolean success = file.delete();
-
-                if (success) {
-                    System.out.println("File '" + fileName + "' deleted successfully.");
-                } else {
-                    System.out.println("Failed to delete file '" + fileName + "'.");
-                    allSuccess = false;
-                }
-            } else {
-                System.out.println("File '" + fileName + "' does not exist.");
-                allSuccess = false;
-            }
-        }
-        if (allSuccess) {
-            return true;
-        } else {
-            return false;
-        }
-    }
 
 }
 
