@@ -1,18 +1,21 @@
+// Main class (UI)
+
 package uk.zatcham.musicdl;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.util.List;
 // Java AWT must be imported one by one instead of * as otherwise awt.list is used
 import java.io.IOException;
 import java.util.prefs.*;
-// UI
+// UI (using flatLaF for theme)
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatDarkLaf;
 
 public class DownloaderUI extends JFrame {
 
-    // Declare UI components
+    // Declare UI components, all as final
     private final JRadioButton soundcloudRadioButton;
     private final JRadioButton youtubeRadioButton;
     private final JTextField urlTextField;
@@ -44,7 +47,7 @@ public class DownloaderUI extends JFrame {
             e.printStackTrace();
         }
 
-        // Panel for radio buttons
+        // Panel for radio buttons to select platform
         JPanel radioButtonPanel = new JPanel();
         soundcloudRadioButton = new JRadioButton("SoundCloud");
         youtubeRadioButton = new JRadioButton("YouTube");
@@ -118,11 +121,11 @@ public class DownloaderUI extends JFrame {
                 throw new RuntimeException(ex);
             }
             stopButton.setEnabled(false);
-            startButton.setEnabled(true);
+            startButton.setEnabled(true); // re-enable after run
         });
 
 
-        // Radio button listener for OAuth token field
+        // Radio button listener for OAuth token field.
         soundcloudRadioButton.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) { // selected
                 oauthTokenLabel.setVisible(true);
@@ -192,71 +195,88 @@ public class DownloaderUI extends JFrame {
      * Opens Settings UI
      */
     private void openSettings() {
-        System.out.println("Opening settings \n ---");
+        System.out.println("Opening settings..");
         // Get settings
         Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
         boolean darkMode = userPrefs.getBoolean("darkMode", true);
-        // Create UI
-        JFrame frame = new JFrame("Settings - Music Downloader");
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(400, 300);
-        frame.setLocationRelativeTo(null);
-
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new GridBagLayout());
-        GridBagConstraints constraints = new GridBagConstraints();
-
-        // Light/Dark Mode Toggle
-        JToggleButton modeToggle = new JToggleButton("Light Mode");
-        constraints.gridx = 0;
-        constraints.gridy = 0;
-        modeToggle.addActionListener(e -> {
-            if (modeToggle.isSelected()) {
-                modeToggle.setText("Dark Mode");
-                userPrefs.putBoolean("darkMode", true);
-                JOptionPane.showMessageDialog(null, "Changes will apply on program restart", "Music DL", JOptionPane.INFORMATION_MESSAGE);
-
-            } else {
-                modeToggle.setText("Light Mode");
-                userPrefs.putBoolean("darkMode", false);
-                JOptionPane.showMessageDialog(null, "Changes will apply on program restart", "Music DL", JOptionPane.INFORMATION_MESSAGE);
-
-            }
-        });
-        if (darkMode) {
-            modeToggle.setText("Dark Mode");
-            modeToggle.setSelected(true);
-            System.out.println("Dark mode currently selected");
-        }
-        mainPanel.add(modeToggle, constraints);
-
-        // Cookies from which browser
-        String[] browsers  = {"edge", "chrome", "firefox"};
-        JComboBox<String> browserList = new JComboBox<>(browsers);
-        constraints.gridx = 0;
-        constraints.gridy = 1;
-
+        boolean keepAwake = userPrefs.getBoolean("keepAwake", false);
         String currentBrowser = userPrefs.get("browser", "edge");
-        System.out.println("Current browser: " + currentBrowser);
-        browserList.getModel().setSelectedItem(currentBrowser);
-        browserList.addActionListener(e -> {
-            String b = (String) browserList.getSelectedItem();
+
+        // Create UI
+        JFrame frame = new JFrame("Settings - Music DL");
+        frame.setSize(500, 250);
+        frame.setLocationRelativeTo(null);
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        JPanel panel = new JPanel(new GridLayout(4, 2, 10, 10));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Browser selection
+        String[] browsers = {"Edge", "Chrome", "Firefox"}; // List of browsers
+        JLabel browserLabel = new JLabel("Browser: ");
+        JComboBox<String> browserComboBox = new JComboBox<>(browsers);
+        System.out.println("Current Browser: " + currentBrowser);
+        browserComboBox.getModel().setSelectedItem(currentBrowser);
+        browserComboBox.addActionListener(e -> {
+            String b = (String) browserComboBox.getSelectedItem();
             userPrefs.put("browser", b);
             System.out.println("Setting " + b + " as browser");
         });
-        mainPanel.add(browserList, constraints);
 
-        JLabel bListTitle = new JLabel("Browser: ");
-        constraints.gridx = 0;
-        constraints.gridy = 1;
-//        constraints.anchor = GridBagConstraints.WEST;
-        mainPanel.add(bListTitle, constraints);
-//        TODO
+        // Dark mode toggle
+        JLabel darkModeLabel = new JLabel("Dark Mode: ");
+        JToggleButton darkModeToggle = new JToggleButton("Off");
+        darkModeToggle.addActionListener(e -> {
+            if (darkModeToggle.isSelected()) {
+                darkModeToggle.setText("On");
+                userPrefs.putBoolean("darkMode", true);
+                JOptionPane.showMessageDialog(null, "Changes will apply on program restart", "Music DL", JOptionPane.INFORMATION_MESSAGE);
+                System.out.println("Setting darkMode to true");
+            } else {
+                darkModeToggle.setText("Off");
+                userPrefs.putBoolean("darkMode", false);
+                JOptionPane.showMessageDialog(null, "Changes will apply on program restart", "Music DL", JOptionPane.INFORMATION_MESSAGE);
+                System.out.println("Setting darkMode to false");
+            }
+        });
+        if (darkMode) {
+            darkModeToggle.setText("On");
+            darkModeToggle.setSelected(true);
+            System.out.println("Dark mode currently selected");
+        }
 
-//        mainPanel.add(modeToggle, BorderLayout.NORTH);
-//         mainPanel.add(browserList, BorderLayout.NORTH); // TODO
-        frame.add(mainPanel);
+        // Keep Awake toggle
+        JLabel keepAwakeLabel = new JLabel("Keep PC Awake: ");
+        JToggleButton keepAwakeToggle = new JToggleButton("Off");
+        if (keepAwake) {
+            keepAwakeToggle.setSelected(true);
+            keepAwakeToggle.setText("On");
+            System.out.println("Keep Awake selected");
+        } else {
+            keepAwakeToggle.setText("Off");
+        }
+        keepAwakeToggle.addActionListener(e -> {
+            if (keepAwakeToggle.isSelected()) {
+                userPrefs.putBoolean("keepAwake", true);
+                System.out.println("Setting keepAwake to true");
+                keepAwakeToggle.setText("On");
+                JOptionPane.showMessageDialog(null, "PC will be kept awake whilst downloading", "Music DL", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                userPrefs.putBoolean("keepAwake", false);
+                System.out.println("Setting keepAwake to false");
+                keepAwakeToggle.setText("Off");
+                JOptionPane.showMessageDialog(null, "PC will not be kept awake whilst downloading", "Music DL", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
 
+        // Add items to UI
+        panel.add(browserLabel);
+        panel.add(browserComboBox);
+        panel.add(darkModeLabel);
+        panel.add(darkModeToggle);
+        panel.add(keepAwakeLabel);
+        panel.add(keepAwakeToggle);
+        // Finish UI
+        frame.add(panel);
         frame.setVisible(true);
     }
 
@@ -304,18 +324,29 @@ public class DownloaderUI extends JFrame {
                 } else if (folderTextField.getText().isEmpty()) {
                     JOptionPane.showMessageDialog(null, "Please enter a folder name.", "Error", JOptionPane.ERROR_MESSAGE);
                     return null;
-                } // no need to check oauth as can work without
+                } // no need to check oauth as can work  (lower quality tho)
 
                 // Change button enabled
                 startButton.setEnabled(false);
                 stopButton.setEnabled(true);
 
+                // Has user selected keep awake
+                Preferences userPrefs = Preferences.userNodeForPackage(DownloaderUI.class);
+                boolean sleepDisabled = false; // TODO
+                if (userPrefs.getBoolean("keepAwake", false) && !sleepDisabled) {
+                    KeepAwake.PowerManagement pm = KeepAwake.PowerManagement.INSTANCE;
+                    sleepDisabled = true;
+                    pm.preventSleep();
+                }
+
                 // Perform the download operation based on the selected platform
-                consoleTextArea.append("---\n");
+                consoleTextArea.append("-----\n");
                 consoleTextArea.append("Platform: " + platform + "\n");
                 consoleTextArea.append("URL: " + url + "\n");
                 consoleTextArea.append("Folder Name: " + folderName + "\n");
-                consoleTextArea.append("OAuth Token: " + oauthToken + "\n");
+                if (platform.equals("SoundCloud")) { // Only show Oauth token if sc selected
+                    consoleTextArea.append("OAuth Token: " + oauthToken + "\n");
+                }
 
                 consoleTextArea.append("Creating folder\n");
                 // Create folder to be used, check if successful
@@ -323,7 +354,6 @@ public class DownloaderUI extends JFrame {
                     consoleTextArea.append("Starting yt-dlp...\n");
                     // Download
                     Downloader downloader = new Downloader(consoleTextArea);
-//                        downloadYT(folderName, url);
                     downloader.startDownload(platform, folderName, url, "");
                     // Delete assets after run - TODO bug
                     consoleTextArea.append("Deleting assets from folder.. \n");
@@ -334,6 +364,12 @@ public class DownloaderUI extends JFrame {
                         consoleTextArea.append("----- \n");
                         stopButton.setEnabled(false);
                         startButton.setEnabled(true);
+                        if (sleepDisabled) { // TODO
+                            sleepDisabled = false;
+                            KeepAwake.PowerManagement pm = KeepAwake.PowerManagement.INSTANCE;
+                            pm.allowSleep();
+                        }
+                        
                     } else {
                         consoleTextArea.append("Error occured whilst deleting assets\n");
                         // Oh well -- if stop button used, try deleting there

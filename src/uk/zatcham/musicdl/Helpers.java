@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Helpers {
 
@@ -186,6 +188,39 @@ public class Helpers {
                 System.exit(0);
             }
         }
+    }
+
+    /**
+     * Checks if URL is for Youtube via Regex
+     * @param url - Given by user
+     * @return bool
+     */
+    public static boolean checkYTURL(String url) {
+        String regex = "^(https?://)?(www\\.)?(youtube\\.com|youtu\\.be)/.*";
+        Pattern p = Pattern.compile(regex);
+        Matcher m = p.matcher(url);
+        return m.matches();
+    }
+
+    public static boolean checkSCURL(String url) {
+        String regex = "^(https?://)?(www\\.)?(soundcloud\\.com)/.*";
+        Pattern p = Pattern.compile(regex);
+        Matcher m = p.matcher(url);
+        return m.matches();
+    }
+
+    /**
+     * Auto recognition of platform based of URL
+     * @param url - URL given by user
+     * @return - String of platform, null if neither
+     */
+    public static String checkURLPlatform(String url) {
+        if (checkYTURL(url)) {
+            return "yt";
+        } else if (checkSCURL(url)) {
+            return "sc";
+        }
+        return "null";
     }
 
 }
